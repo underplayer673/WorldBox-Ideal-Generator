@@ -6,13 +6,9 @@ import threading
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-# === НАСТРОЙКИ ===
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("green")
 
-# ==========================================
-# ОКНО "ХИРУРГА" (РЕДАКТОР СОСТАВА JSON)
-# ==========================================
 class SaveSurgeonWindow(ctk.CTkToplevel):
     def __init__(self, parent, data, callback, lang="ru"):
         super().__init__(parent)
@@ -20,7 +16,6 @@ class SaveSurgeonWindow(ctk.CTkToplevel):
         self.callback = callback
         self.lang = lang
         
-        # СЛОВАРЬ ХИРУРГА
         self.loc = {
             "ru": {
                 "title": "WorldBox Save Surgeon (Редактор состава)",
@@ -29,7 +24,6 @@ class SaveSurgeonWindow(ctk.CTkToplevel):
                 "btn_cancel": "Отмена",
                 "btn_gen": "СГЕНЕРИРОВАТЬ ФАЙЛ",
                 "map_lock": "[Массив Карты: Вкл/Выкл]",
-                # Опции
                 "opt_all": "Все (100%)",
                 "opt_light": "Легкая (Убрать мусор)",
                 "opt_strong": "Сильная (Топ-50)",
@@ -45,7 +39,6 @@ class SaveSurgeonWindow(ctk.CTkToplevel):
                 "btn_cancel": "Cancel",
                 "btn_gen": "GENERATE FILE",
                 "map_lock": "[Map Array: On/Off]",
-                # Options
                 "opt_all": "All (100%)",
                 "opt_light": "Light (No Trash)",
                 "opt_strong": "Strong (Top-50)",
@@ -133,19 +126,14 @@ class SaveSurgeonWindow(ctk.CTkToplevel):
         self.callback(final_cfg)
         self.destroy()
 
-
-# ==========================================
-# ГЛАВНОЕ ПРИЛОЖЕНИЕ
-# ==========================================
 class WorldBoxFinalApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # ЛОКАЛИЗАЦИЯ
         self.lang_code = "ru"
         self.loc = {
             "ru": {
-                "window_title": "WorldBox Generator v7.2 (Final Complete)",
+                "window_title": "WorldBox Generator v7.2",
                 "header": "Генератор Идеала v7.2",
                 "desc": "Полный парсер + Редактор 'Хирург' + Режимы",
                 "path_prefix": "Папка: ",
@@ -176,7 +164,7 @@ class WorldBoxFinalApp(ctk.CTk):
                 "surgeon_proc": "Выполнение операции..."
             },
             "en": {
-                "window_title": "WorldBox Generator v7.2 (Final Complete)",
+                "window_title": "WorldBox Generator v7.2",
                 "header": "Ideal Generator v7.2",
                 "desc": "Full Parser + Surgeon Editor + Modes",
                 "path_prefix": "Path: ",
@@ -344,22 +332,20 @@ class WorldBoxFinalApp(ctk.CTk):
             else:
                 raise FileNotFoundError(self.get_text("file_not_found"))
 
-            # ID РЕЖИМА
             current_modes = self.get_text("modes")
             mode_idx = current_modes.index(mode_text) if mode_text in current_modes else 3
 
-            # КАСТОМ (ХИРУРГ)
             if mode_idx == 0:
                 self.after(0, lambda: SaveSurgeonWindow(self, data, lambda cfg: self.run_surgeon_thread(data, slot_num, cfg), lang=self.lang_code))
                 return
 
             self.lbl_status.configure(text=self.get_text("status_filter").format(mode_text), text_color="#3498db")
             
-            if mode_idx == 1: # Айсберг
+            if mode_idx == 1: 
                 final_path = self.save_raw_dump(data, slot_num, "Iceberg", clean_maps=False)
-            elif mode_idx == 2: # Гигант
+            elif mode_idx == 2: 
                 final_path = self.save_raw_dump(data, slot_num, "Giant", clean_maps=True)
-            else: # Classic, Mini, Ultra
+            else: 
                 final_path = self.apply_exact_algorithm(data, slot_num, mode_idx)
 
             self.finish_process(final_path)
@@ -382,11 +368,10 @@ class WorldBoxFinalApp(ctk.CTk):
                     keys_to_del.append(k)
                     continue
                 
-                mode = str(settings["mode"]) # Convert to string to match keywords safely
+                mode = str(settings["mode"])
                 val = data[k]
                 if not isinstance(val, list): continue
                 
-                # --- УМНАЯ СОРТИРОВКА (Работает для обоих языков) ---
                 if k == "cities" and ("Сильная" in mode or "Strong" in mode or "Экстрим" in mode or "Extreme" in mode):
                     val.sort(key=lambda x: x.get("created_time", 0))
                 
@@ -397,30 +382,21 @@ class WorldBoxFinalApp(ctk.CTk):
                 if k == "cultures": val.sort(key=lambda x: x.get("renown", 0), reverse=True)
                 if k == "languages": val.sort(key=lambda x: x.get("speakers_new", 0), reverse=True)
 
-                # --- ЛОГИКА ОБРЕЗКИ (Проверяем и RU, и EN ключевые слова) ---
-                
-                # 1. LIGHT / ЛЕГКАЯ
                 if "Легкая" in mode or "Light" in mode:
                     if k == "families": data[k] = [x for x in val if x.get("count", 0) > 0]
                     elif k == "wars": data[k] = [x for x in val if not x.get("ended", False)]
-                
-                # 2. STRONG / СИЛЬНАЯ
                 elif "Сильная" in mode or "Strong" in mode:
                     if k == "actors_data":
                         data[k] = [x for x in val if (x.get("favorite") or x.get("s_kills", 0) > 0 or x.get("level", 1) > 1)]
-                    else: # Top 50
+                    else: 
                         data[k] = val[:50]
-                
-                # 3. EXTREME / ЭКСТРИМ
                 elif "Экстрим" in mode or "Extreme" in mode:
                     if k == "actors_data":
                         data[k] = [x for x in val if (x.get("favorite") or x.get("king", False))]
-                    else: # Top 15
+                    else: 
                         data[k] = val[:15]
-                
-                # 4. СПЕЦ. ОПЦИИ АКТЕРОВ
                 elif "живые" in mode or "Living" in mode:
-                     pass # Worldbox обычно чистит мертвых, но можно добавить проверку HP > 0
+                     pass 
                 elif "важные" in mode or "Important" in mode:
                      data[k] = [x for x in val if (x.get("favorite") or x.get("s_kills", 0) > 0)]
                 elif "Короли" in mode or "Kings" in mode:
@@ -456,19 +432,16 @@ class WorldBoxFinalApp(ctk.CTk):
             json.dump(data, f, indent=None, ensure_ascii=False)
         return final_path
 
-    # === ТВОЙ ОРИГИНАЛЬНЫЙ ПАРСЕР ===
     def apply_exact_algorithm(self, data, slot_num, mode_idx):
-        # mode_idx: 3=Classic, 4=Mini, 5=Ultra
-        
         LIMIT_LISTS = 1000000
         PROCESS_CITY_RES = True
         PROCESS_STATS_ALL = True
         
-        if mode_idx == 4: # Mini
+        if mode_idx == 4: 
             LIMIT_LISTS = 15
             PROCESS_CITY_RES = False
             PROCESS_STATS_ALL = False
-        elif mode_idx == 5: # Ultra
+        elif mode_idx == 5: 
             LIMIT_LISTS = 3
             PROCESS_CITY_RES = False
             PROCESS_STATS_ALL = False
@@ -490,7 +463,6 @@ class WorldBoxFinalApp(ctk.CTk):
             "ECONOMY_CITIES": [], "VIP_PEOPLE": [], "WORLD_RECORDS": {}
         }
 
-        # LIST FILTERS
         def get_sorted(key, sort_key):
             if key in data: return sorted(data[key], key=lambda x: x.get(sort_key, 0), reverse=True)[:LIMIT_LISTS]
             return []
@@ -519,7 +491,6 @@ class WorldBoxFinalApp(ctk.CTk):
                     "Kills": s.get("total_kills"), "Deaths": s.get("total_deaths")
                 })
 
-        # MATH
         actors = data.get("actors_data", [])
         city_pop, city_mil, k_pop, k_mil, k_armies = {}, {}, {}, {}, {}
         for a in actors:
@@ -572,7 +543,6 @@ class WorldBoxFinalApp(ctk.CTk):
         vip_ids = set()
         food_items = ["wheat", "bread", "meat", "fish", "sushi", "jam", "cider", "pie", "tea", "soup", "berries", "ale", "burger", "coconut", "mushrooms", "herbs", "worms", "banana", "cactus", "candy", "lemon"]
 
-        # CITIES
         if "cities" in data and mode_idx != 5:
             for c in data["cities"]:
                 if c.get("leaderID"): vip_ids.add(str(c.get("leaderID")))
@@ -588,7 +558,6 @@ class WorldBoxFinalApp(ctk.CTk):
                     entry["Full_Resources"] = dict(sorted(res.items(), key=lambda x: x[1], reverse=True)[:10])
                 final_report["ECONOMY_CITIES"].append(entry)
 
-        # KINGDOMS
         k_cities_map = {}
         if "cities" in data:
             for c in data["cities"]:
@@ -615,13 +584,12 @@ class WorldBoxFinalApp(ctk.CTk):
                     ks["Weapons"] = dict(sorted(kw.items(), key=lambda x: x[1], reverse=True)[:5])
                 final_report["POLITICS"]["Kingdoms"].append(ks)
 
-        # WARS
         if "wars" in data:
             target_wars = data["wars"]
-            if mode_idx == 4: # Mini
+            if mode_idx == 4: 
                 sorted_w = sorted(data["wars"], key=lambda x: x.get("total_deaths", 0), reverse=True)
                 target_wars = sorted_w[:LIMIT_LISTS]
-            elif mode_idx == 5: # Ultra
+            elif mode_idx == 5: 
                 target_wars = [w for w in data["wars"] if not w.get("ended", True)]
             
             for w in target_wars:
@@ -631,7 +599,6 @@ class WorldBoxFinalApp(ctk.CTk):
                     "Start": int(w.get("created_time", 0) // TIME_DIVIDER)
                 })
 
-        # VIP & STATS
         records_data = {}
         TRAIT_STATS = {
             "genius": {"intelligence": 10, "warfare": 5, "diplomacy": 5, "stewardship": 7},
@@ -724,7 +691,7 @@ class WorldBoxFinalApp(ctk.CTk):
                     "Age": age, "Kills": kills, "Traits": a_traits,
                     "Stats": {"Int": s_intel, "Stew": s_stew, "War": s_war, "Dipl": s_dipl}
                 }
-                if mode_idx == 3: # Classic
+                if mode_idx == 3: 
                     arts = []
                     for itid in actor.get("saved_items", []):
                         it = items_map.get(str(itid))
@@ -742,7 +709,6 @@ class WorldBoxFinalApp(ctk.CTk):
                 "Traits": act.get("saved_traits", [])
             }
 
-        # SAVE
         mode_tags = ["Custom", "Iceberg", "Giant", "Classic", "Mini", "Ultra"]
         base_name = f"Ideal_WB_{mode_tags[mode_idx]}_Save{slot_num}.txt"
         final_path = os.path.join(self.downloads_path, base_name)
